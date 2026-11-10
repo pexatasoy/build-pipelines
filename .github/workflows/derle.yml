@@ -11,15 +11,19 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      # Kaynak depodan DEĞİL, sunucudan geliyor. Böylece her değişiklikte
-      # GitHub'a dosya yüklemek gerekmiyor: kaynak güncellenir, burada
-      # "Re-run all jobs" denir, o kadar.
-      # ⚠️ Windows işinde kabuk PowerShell: `unzip` YOK, `Expand-Archive` var.
-      # `curl` de PowerShell'de takma ad olduğu için `curl.exe` yazıyoruz.
+      # Kaynak PRIVATE repodan: pexatasoy/fotoyol, `derleme` dalı (yayınla betiğinin hazırladığı
+      # paket; eskiden herkese açık zip'ti). Okuma: repoya özel salt-okunur deploy key (ANAHTAR_FOTOYOL).
       - name: Kaynağı çek
+        uses: actions/checkout@v4
+        with:
+          repository: pexatasoy/fotoyol
+          ref: derleme
+          ssh-key: ${{ secrets.ANAHTAR_FOTOYOL }}
+          persist-credentials: false
+
+      - name: Bu derlemedeki kaynak
         run: |
-          curl.exe -fsSL -H "Cache-Control: no-cache" -o kaynak.zip https://chainmedia.co/fotoyol/kaynak.zip
-          Expand-Archive -Path kaynak.zip -DestinationPath . -Force
+          git log -1 --format='paket: %h  %cd'
           Write-Host "--- bu derlemedeki kaynak ---"
           Get-Content DAMGA.txt
           Get-ChildItem -Recurse pc, motor | Select-Object -ExpandProperty FullName
@@ -100,11 +104,19 @@ jobs:
   macos:
     runs-on: macos-latest
     steps:
-      # Kaynak depodan DEĞİL, sunucudan geliyor (bkz. Windows işindeki not).
+      # Kaynak PRIVATE repodan: pexatasoy/fotoyol, `derleme` dalı (yayınla betiğinin hazırladığı
+      # paket; eskiden herkese açık zip'ti). Okuma: repoya özel salt-okunur deploy key (ANAHTAR_FOTOYOL).
       - name: Kaynağı çek
+        uses: actions/checkout@v4
+        with:
+          repository: pexatasoy/fotoyol
+          ref: derleme
+          ssh-key: ${{ secrets.ANAHTAR_FOTOYOL }}
+          persist-credentials: false
+
+      - name: Bu derlemedeki kaynak
         run: |
-          curl -fsSL -H "Cache-Control: no-cache" -o kaynak.zip https://chainmedia.co/fotoyol/kaynak.zip
-          unzip -oq kaynak.zip
+          git log -1 --format='paket: %h  %cd'
           echo "--- bu derlemedeki kaynak ---"
           cat DAMGA.txt
           ls -R pc motor
