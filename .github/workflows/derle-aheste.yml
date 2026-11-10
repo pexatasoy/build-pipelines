@@ -17,15 +17,19 @@ jobs:
     runs-on: macos-26
 
     steps:
+      # Kaynak PRIVATE repodan: pexatasoy/at-pansiyon-ios, `derleme` dalı (yayınla betiğinin hazırladığı
+      # paket; eskiden herkese açık zip'ti). Okuma: repoya özel salt-okunur deploy key (ANAHTAR_AT_PANSIYON_IOS).
       - name: Kaynağı çek
+        uses: actions/checkout@v4
+        with:
+          repository: pexatasoy/at-pansiyon-ios
+          ref: derleme
+          ssh-key: ${{ secrets.ANAHTAR_AT_PANSIYON_IOS }}
+          persist-credentials: false
+
+      - name: Bu derlemedeki kaynak
         run: |
-          # Tek denemeye bırakmıyoruz: anlık bir kopma bütün derlemeyi çöpe atıyor.
-          curl -fsSL --retry 6 --retry-delay 5 --retry-all-errors \
-            --connect-timeout 20 --max-time 300 \
-            -H "Cache-Control: no-cache" -o kaynak.zip \
-            https://chainmedia.co/fotoyol/aheste/aheste-kaynak.zip \
-            || { echo "Kaynak indirilemedi — sunucu geçici olarak erişilemiyor olabilir."; exit 1; }
-          unzip -oq kaynak.zip
+          git log -1 --format='paket: %h  %cd'
           echo "--- bu derlemedeki kaynak ---"
           cat DAMGA.txt
 
