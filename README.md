@@ -22,7 +22,6 @@ server  ──  yayinla-ios.sh  ──▶  private repo, `derleme` branch  ─�
 | [Fotoyol](https://chainmedia.co/fotoyol/) | `derle` · `derle-ios` · `fotoyol-testflight` · `fotoyol-vitrin` | Windows .exe + macOS .app · iOS check · TestFlight · store screenshots |
 | SyncYourPods | `syncyourpods` · `syncyourpods-windows` | iOS .ipa · Windows .exe (MSVC, Defender-scanned) |
 | Seyir | `seyir-engine-check` · `seyir-personal-check` · `seyir-personal-sign` | tvOS engine probe · native build · signed personal build |
-| Ters Kule | `derle-terskule` · `terskule-testflight` | my brother's game |
 
 ## Why it is set up this way
 
