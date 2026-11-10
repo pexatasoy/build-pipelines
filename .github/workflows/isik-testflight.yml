@@ -24,16 +24,22 @@ jobs:
   yayinla:
     runs-on: macos-26
     steps:
+      # Kaynak PRIVATE repodan geliyor: pexatasoy/little-light, `derleme` dalı.
+      # O dal, sunucudaki yayinla-ios.sh'ın hazırladığı paketi tutar (eskiden herkese
+      # açık bir zip'ti). Okuma izni yalnız bu repoya özel, salt-okunur bir deploy key
+      # (secret ANAHTAR_LITTLE_LIGHT; kurulum: /root/github-profil/duzen/anahtar_bagla.py).
       - name: Kaynağı çek
-        run: |
-          curl -fsSL --retry 6 --retry-delay 5 --retry-all-errors \
-            --connect-timeout 20 --max-time 300 \
-            -H "Cache-Control: no-cache" \
-            -o ios-kaynak.zip https://chainmedia.co/fotoyol/isik/isik-kaynak.zip \
-            || { echo "Kaynak indirilemedi."; exit 1; }
-          unzip -oq ios-kaynak.zip
-          cat DAMGA.txt
+        uses: actions/checkout@v4
+        with:
+          repository: pexatasoy/little-light
+          ref: derleme
+          ssh-key: ${{ secrets.ANAHTAR_LITTLE_LIGHT }}
+          persist-credentials: false
 
+      - name: Bu derlemedeki kaynak
+        run: |
+          git log -1 --format='paket: %h  %cd'
+          cat DAMGA.txt
       - name: XcodeGen
         run: brew install xcodegen
 
