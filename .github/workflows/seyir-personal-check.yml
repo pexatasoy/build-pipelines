@@ -8,7 +8,13 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 20
     steps:
+      # Seyir kodu PRIVATE repodan (pexatasoy/seyir); okuma: salt-okunur deploy key.
       - uses: actions/checkout@v4
+        with:
+          repository: pexatasoy/seyir
+          ref: main
+          ssh-key: ${{ secrets.ANAHTAR_SEYIR }}
+          persist-credentials: false
       - name: Install XcodeGen
         run: command -v xcodegen || brew install xcodegen
       - name: Compile and inspect native app
