@@ -73,6 +73,28 @@ jobs:
           "--- uygulama günlüğü"; Get-Content "$env:APPDATA\SecondScreenSyndrome\gunluk.txt" -Encoding UTF8 -ErrorAction SilentlyContinue
           Copy-Item "$env:APPDATA\SecondScreenSyndrome\gunluk.txt" deneme\ -ErrorAction SilentlyContinue
 
+      - name: Sihirbaz ve perde denemesi (deneme kancasıyla)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          foreach ($d in @("sihirbaz:0", "sihirbaz:2", "sihirbaz:4", "perde")) {
+            $env:SSS_DENE = $d
+            $p = Start-Process -FilePath "cikti\SecondScreenSyndrome.exe" -PassThru
+            Start-Sleep -Seconds 13
+            "$d → çalışıyor mu: " + (-not $p.HasExited)
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            $bmp.Save("deneme\" + ($d -replace ":", "-") + ".png")
+            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+            Start-Sleep -Seconds 2
+          }
+          $env:SSS_DENE = $null
+          "--- uygulama günlüğü"; Get-Content "$env:APPDATA\SecondScreenSyndrome\gunluk.txt" -Encoding UTF8 -ErrorAction SilentlyContinue | Select-Object -Last 30
+          Copy-Item "$env:APPDATA\SecondScreenSyndrome\gunluk.txt" deneme\ -Force -ErrorAction SilentlyContinue
+
       - name: Bağımlılıklar
         shell: pwsh
         continue-on-error: true
