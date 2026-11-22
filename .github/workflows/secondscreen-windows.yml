@@ -1,0 +1,107 @@
+name: SecondScreenSyndrome Windows
+
+# MSVC derlemesi + gerçek Windows'ta tanı kipi (ekran okuma, düzen, renk profili kur/kaldır) + açılış denemesi + Defender.
+# Kaynak private repodan; depoda yalnız bu tarif durur.
+on:
+  workflow_dispatch:
+
+jobs:
+  derle:
+    runs-on: windows-latest
+    steps:
+      - name: Kaynağı çek
+        uses: actions/checkout@v4
+        with:
+          repository: pexatasoy/second-screen-syndrome
+          ref: main
+          ssh-key: ${{ secrets.ANAHTAR_SECOND_SCREEN_SYNDROME }}
+          persist-credentials: false
+          path: repo
+
+      - name: Rust
+        shell: bash
+        run: |
+          rustup update stable --no-self-update 2>&1 | tail -2
+          rustc --version
+          git -C repo log -1 --format='kaynak: %h  %cd  %s'
+
+      - name: Testler
+        shell: bash
+        working-directory: repo
+        run: cargo test --release 2>&1 | tail -45
+
+      - name: Derle (MSVC)
+        shell: pwsh
+        working-directory: repo
+        run: |
+          cargo build --release 2>&1 | Select-Object -Last 25
+          if ($LASTEXITCODE -ne 0) { throw "derleme başarısız" }
+          New-Item -ItemType Directory -Force -Path ..\cikti | Out-Null
+          Copy-Item target\release\SecondScreenSyndrome.exe ..\cikti\
+          Get-ChildItem ..\cikti | Format-Table Name, Length
+
+      - name: Tanı kipi (ekranlar, düzen, pencereler, renk profili kur/kaldır)
+        shell: pwsh
+        env:
+          SSS_TANI_PROFIL: "1"
+          SSS_TANI_NVIDIA: "1"
+        run: |
+          New-Item -ItemType Directory -Force -Path deneme | Out-Null
+          $p = Start-Process -FilePath "cikti\SecondScreenSyndrome.exe" -ArgumentList "--tani", "deneme\tani.txt" -PassThru -Wait
+          "çıkış kodu (hata sayısı): $($p.ExitCode)"
+          Get-Content deneme\tani.txt -Encoding UTF8
+          "--- kurulu renk profilleri"
+          Get-ChildItem "$env:WINDIR\System32\spool\drivers\color" | Where-Object Name -like "SecondScreen*" | Format-Table Name, Length
+          if ($p.ExitCode -ne 0) { throw "tanı kipi hata verdi" }
+
+      - name: Açılış ve panel denemesi
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $p = Start-Process -FilePath "cikti\SecondScreenSyndrome.exe" -PassThru
+          Start-Sleep -Seconds 14
+          "çalışıyor mu: " + (-not $p.HasExited)
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("deneme\ekran.png")
+          "--- ayarlar"; Get-Content "$env:APPDATA\SecondScreenSyndrome\ayarlar.json" -ErrorAction SilentlyContinue
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+          Start-Sleep -Seconds 2
+          "--- uygulama günlüğü"; Get-Content "$env:APPDATA\SecondScreenSyndrome\gunluk.txt" -Encoding UTF8 -ErrorAction SilentlyContinue
+          Copy-Item "$env:APPDATA\SecondScreenSyndrome\gunluk.txt" deneme\ -ErrorAction SilentlyContinue
+
+      - name: Bağımlılıklar
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $db = Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -Recurse -Filter dumpbin.exe -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Hostx64\\x64" } | Select-Object -First 1
+          & $db.FullName /nologo /dependents cikti\SecondScreenSyndrome.exe | Select-String "\.dll"
+
+      - name: Defender taraması
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          try { Update-MpSignature -ErrorAction Stop; "imzalar güncellendi" } catch { "imza güncellenemedi: $_" }
+          $mp = "$env:ProgramFiles\Windows Defender\MpCmdRun.exe"
+          $yol = (Resolve-Path cikti\SecondScreenSyndrome.exe).Path
+          & $mp -Scan -ScanType 3 -File $yol -DisableRemediation 2>&1 | Out-String
+          "çıkış kodu: $LASTEXITCODE  (0 = temiz, 2 = tehdit)"
+
+      - name: Deneme çıktıları
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-deneme
+          path: deneme/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: exe'yi sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: secondscreen-windows
+          path: cikti/
+          retention-days: 14
