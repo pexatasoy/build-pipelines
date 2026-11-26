@@ -76,6 +76,7 @@ jobs:
         env:
           SS_JETON: ${{ secrets.CT_SS_JETON }}
           SS_JETON_DESK: ${{ secrets.CT_SS_JETON_DESK }}
+          SS_JETON_YONETICI: ${{ secrets.CT_SS_JETON_YONETICI }}
         run: |
           xcodebuild \
             -project CTCep.xcodeproj -scheme CTCep \
@@ -114,9 +115,16 @@ jobs:
             if [ -n "$SS_JETON_DESK" ]; then
               for E in $(cat EKRANLAR-DESK.txt 2>/dev/null); do cek "$E" 10 -jeton "$SS_JETON_DESK" -ekran "$E"; done
             fi
+            # Yönetici ekranları yönetici oturumuyla (Pas Demo · şahin)
+            if [ -n "$SS_JETON_YONETICI" ]; then
+              for E in $(cat EKRANLAR-YONETICI.txt 2>/dev/null); do cek "$E" 12 -jeton "$SS_JETON_YONETICI" -ekran "$E"; done
+            fi
             xcrun simctl ui "$UDID" appearance dark || true
             cek koyu-00-giris 8
             for E in $(cat EKRANLAR.txt); do cek "koyu-$E" 10 -jeton "$SS_JETON" -ekran "$E"; done
+            if [ -n "$SS_JETON_YONETICI" ]; then
+              for E in y-bugun y-raporlar y-temsilci; do cek "koyu-$E" 12 -jeton "$SS_JETON_YONETICI" -ekran "$E"; done
+            fi
           else
             echo "⚠️ CT_SS_JETON yok — yalnız giriş ekranı çekildi."
           fi
